@@ -23,6 +23,9 @@ jupyter:
 editor: 
   markdown: 
     wrap: 72
+project:
+  type: website
+  output-dir: docs
 ---
 
 # Anomaly Detection of U.S. Congress Trades
