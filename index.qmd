@@ -20,4 +20,230 @@ jupyter:
     display_name: R
     language: R
     name: ir
+editor: 
+  markdown: 
+    wrap: 72
 ---
+
+# Anomaly Detection of U.S. Congress Trades
+
+*A tutorial and explanation using unsupervised machine learning*
+
+Members of the United States Congress face long-standing concerns around
+conflicts of interest due to their access to market-moving information
+and their role in shaping economic policy. The [STOCK
+Act](https://www.congress.gov/bill/112th-congress/senate-bill/2038)
+requires lawmakers to publicly disclose their financial transactions,
+creating an opportunity for data-driven analysis of Congressional
+trading behavior.
+
+However, transparency alone does not guarantee accountability. With
+hundreds of lawmakers and tens of thousands of disclosed trades,
+identifying suspicious activity manually is impractical. This project
+explores how **machine learning–based anomaly detection** can help flag
+unusual trading patterns that deserve closer scrutiny without making
+accusations or legal claims.
+
+Using only public data, this tutorial demonstrates how unsupervised
+models can reduce a complex investigative problem into a manageable set
+of high-risk cases for journalists, researchers, and oversight bodies to
+examine more closely.
+
+## Why Congressional Trading Is a Data Science Problem
+
+Congressional stock trading data is both large and structurally complex:
+\* Hundreds of individual lawmakers \* Thousands of trades across
+different industries \* Varying trade sizes, timing, and market
+conditions \* Sparse labels - we rarely know which trades are illegal
+
+This makes the problem ill-suited for traditional supervised machine
+learning. We do not have ground-truth labels for “insider trading,” and
+even confirmed cases are extremely rare.
+
+Yet the issue is far from hypothetical. Former Congressman [Chris
+Collins](https://www.justice.gov/usao-sdny/pr/former-congressman-christopher-collins-sentenced-insider-trading-scheme-and-lying)
+used non-public information about a pharmaceutical trial to sell shares
+and avoid over \$700,000 in losses. A [New York Times
+analysis](https://www.nytimes.com/interactive/2022/09/13/us/politics/congress-stock-trading-investigation.html)
+found that roughly one-fifth of Congress members traded stocks related
+to industries overseen by their committees.
+
+These examples highlight the need for scalable, computational analysis.
+Machine learning can help by identifying trades that look unusual
+compared to typical behavior.
+
+## Project Goal
+
+The goal of this project is not to accuse individuals of wrongdoing.
+Instead, it aims to **automatically identify trades that are
+statistically unusual compared to typical Congressional trading
+behavior**. You can follow along by using the code in this
+[repository.](https://github.com/tiffchu/Anomaly_Detection_US_Senate/blob/main/sprint4/capstone-sprint4-Main.ipynb)
+
+These flagged trades can then be examined manually with additional
+context, such as committee memberships, news events, or regulatory
+actions. Machine learning narrows the search space, then humans provide
+interpretation and judgment
+
+![Top earning congress members in 2024 through
+trading](img/traders2.png)
+
+## Data Sources and Structure
+
+This project uses only publicly available data, including:
+
+1.  Congressional trade disclosures
+
+-   Source: Senate stock transaction
+    [data](https://www.kaggle.com/datasets/shabbarank/congressional-trading-inception-to-march-23)
+-   Fields include transaction date, ticker, trade type, and trade value
+
+2.  Historical stock price data: S&P Data from Yfinance
+
+-   Used to calculate post-trade returns and market context
+
+3.  Contextual features, time series aggregates
+
+-   Time windows relative to trades
+-   Aggregated return statistics The resulting dataset contains
+    thousands of observations, each representing a single trade combined
+    with numerical features showing the current market.
+
+## Tutorial
+
+#### Data Cleaning and Preprocessing
+
+Before applying machine learning, the raw data must be cleaned and
+standardized.
+
+Handling Missing and Inconsistent Values Financial disclosure data from
+our dataset contains: \* Ranges instead of exact trade values \* Missing
+prices due to non-trading days \* Inconsistent ticker formats These are
+addressed through: \* Converting value ranges into numerical midpoints
+\* Dropping trades with insufficient market data \* Aligning trade dates
+with nearest available trading days This step is critical as anomaly
+detection is highly sensitive to noise.
+
+#### Feature Scaling
+
+Because anomaly detection algorithms rely on distance metrics, feature
+scaling is essential. All numerical features are standardized so that
+large-scale features (e.g., returns) do not dominate smaller-scale ones
+This ensures the model treats each signal proportionately.
+
+#### Feature Engineering
+
+Raw trades alone are not informative enough. The model needs features
+that describe how unusual a trade is relative to normal behavior. Key
+engineered features include: \* Post-trade returns over different time
+horizons \* Relative performance compared to the broader market \* Trade
+frequency patterns \* Magnitude of price movement following the trade
+For example, a trade followed by unusually high short-term returns may
+be more suspicious than one aligned with normal market fluctuations.
+These features transform qualitative concerns (“like the trade looking
+lucky or coincidental”) into quantitative signals.
+
+#### Unsupervised Anomaly Detection?
+
+Unlike fraud detection in credit cards, we do not have labeled examples
+of insider trading for Congress. So we inspect **which trades look most
+different from the majority of Congressional trades?** Unsupervised
+anomaly detection models are ideal for this setting because they learn
+what “normal” looks like and flags deviations without prior labels. This
+project explores two complementary approaches and combines results from
+both.
+
+#### Method 1: Agglomerative Clustering
+
+Agglomerative clustering is a hierarchical method that groups similar
+data points together. The intuition behind this is that most trades
+behave similarly and cluster together and anomalous trades form small,
+distant clusters. The algorithm starts with each trade as its own
+cluster and iteratively merges the closest clusters until a predefined
+structure is reached. Trades belonging to very small or isolated
+clusters are treated as potential anomalies. **Pros:** Simple and
+interpretable, effective for identifying extreme outliers, and no
+assumptions about data distribution. This method serves as a baseline
+anomaly detector and provides intuition about the structure of the data.
+
+![After dimensionality reduction of the dataset and using the clustering
+model resulting labels to define cluster
+colors](img/pca_a.png){#fig-pca_a}
+
+![dendrogram cluster visualization longer vertical lines connecting
+points = larger distances (the second
+cluster)](img/dendro.png){#fig-dendro}
+
+### Method 2: Autoencoder Neural Network
+
+To capture more subtle patterns, the project also uses an autoencoder, a
+type of neural network designed for unsupervised learning. An
+autoencoder learns to: Compress the input data into a low-dimensional
+representation Reconstruct the original data from that representation
+During training, it learns the dominant patterns present in the dataset.
+*Anomaly detection via reconstruction error*: Normal trades are
+reconstructed accurately and unusual trades have high reconstruction
+error This error becomes the anomaly score. *Pros:* anomalies are subtle
+rather than extreme and relationships between features are non-linear
+
+![Principal Component Analysis (PCA) on a dataset to reduce
+dimensionality to two component and then displays the transformed data
+in a scatter plot colored by cluster
+labels](img/pca_ae.png){#fig-pca_ae}
+
+![Anomaly-Detected Congress members and the top investors in that
+group](img/bar.png){#fig-bar}
+
+### Comparing the Two Methods
+
+| Method                   | Strengths                 | Limitations             |
+|------------------------|-------------------------|------------------------|
+| Agglomerative Clustering | Simple, interpretable     | Misses subtle anomalies |
+| Autoencoder              | Captures complex patterns | Less transparent        |
+
+Using both methods provides robustness: trades flagged by multiple
+models deserve particular attention.
+
+#### Visualizing Anomalies
+
+Visualization plays a crucial role in interpretation. Above, we used: \*
+Dimensionality reduction plots (PCA) showing separation between normal
+and flagged trades \* Ranked bar charts of the most suspicious trades
+and lawmakers These visuals help answer: How extreme are flagged trades
+compared to the norm? Are anomalies isolated or systematic?
+
+### Interpreting the Results
+
+The models consistently flag trades that: \* Exhibit unusually high
+short-term returns \* Occur at statistically rare times relative to
+market movements \* Appear inconsistent with typical Congressional
+trading behavior Importantly, being flagged does not imply guilt.
+Innocent behavior can trigger anomalies, especially during volatile
+markets. However, the key advantage is scale reduction, from thousands
+of trades to a small subset worthy of deeper investigation
+
+![plot](img/repub.png){#fig-rep} ![plot](img/democrat.png){#fig-demo}
+
+### Limitations and Ethical Considerations
+
+This approach has important limitations: \* No causal claims can be made
+\* Public data may be incomplete or delayed \* Contextual information
+(e.g., blind trusts) may be missing Ethically, this tool should be used
+for accountability and transparency, not accusation. Human oversight is
+essential.
+
+#### Why This Matters
+
+Machine learning–based anomaly detection offers a scalable, objective
+way to analyze Congressional trading behavior. It strengthens democratic
+accountability by enabling: \* Journalists to prioritize investigations
+\* Researchers to study systemic patterns \* The public to better
+understand financial conflicts of interest By leveraging public data
+responsibly, this project demonstrates how data science can support
+transparency without overstepping its role.
+
+Link to website: [Click
+here](https://sites.google.com/view/tiff-anomaly-detection/home?authuser=0)
+
+Link to github repo and notebook: [Click
+here](https://github.com/tiffchu/Anomaly_Detection_US_Senate)
