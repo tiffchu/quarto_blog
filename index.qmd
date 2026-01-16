@@ -13,7 +13,6 @@ title-block-banner: true
 project:
   type: website
   output-dir: docs
-execute: false
 ---
 
 
