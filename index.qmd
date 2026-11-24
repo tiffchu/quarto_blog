@@ -1,5 +1,5 @@
 ---
-title: lab2_blog_tchu2001
+title: Anomaly Detection Project - ML Methods and Research Results
 engine: knitr
 listing:
   contents: posts
